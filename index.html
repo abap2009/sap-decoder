@@ -316,12 +316,13 @@
 
             // Prepender texto de instrucciones (replica de out2 en ABAP)
             if (decodedText) {
-                const out2 = 'crea un documento en word y ajustame esta documentación para que el arbol final este correctamente armado solo con los textos como en sap spro que se ven algo asi ' +
-                    'ejemplo "Gestión financiera -> Contabilidad principal (nuevo) -> Operaciones periódicas -> Valoración ' +
-                    'ampliada en la contabilidad principal -> Opciones generales -> Activar valoración avanzada", también cámbiame los textos &SHORTTEXT& por Texto breve en negrita, &USE& por Utilización en negrita, <ZH>Atención</> por Atención en negrita, ' +
-                    '&PRECONDITIONS& por Requisitos previos en negrita,' +
-                    '&STANDARD_SETUP&' + 'por Estructura estándar en negrita y &ACTIVITY& por Actividades en negrita quita los caracteres especiales como < o >, por ultimo la parte de Valores en la configuración formateala como una tabla, ' +
-                    'también le agregas un indice al principio con el nombre de la actividad y el texto de la actividad, aqui te doy la documentación:';
+                const out2 = 'crea un documento en word nuevo con el logo y formato del archivo con el nombre template.docx que esta en el escritorio pero con los datos que' + 
+                    'te doy en el siguiente promt y ajustame esta documentación agregando numeración a las actividades por ejemplo 1.1 configurar sociedad, 1.2 configurar centros, 1.3 ' +
+                    'configurar almacenes y que el arbol final este correctamente armado solo con los textos como en sap spro que se ven algo asi ejemplo "Gestión financiera -> Contabilidad' +
+                    'principal (nuevo) -> Operaciones periódicas -> Valoración ampliada en la contabilidad principal -> Opciones generales -> Activar valoración avanzada", también cámbiame ' +
+                    'los textos &SHORTTEXT& por Texto breve en negrita, &USE& por Utilización en negrita, <ZH>Atención</> por Atención en negrita, &PRECONDITIONS& por Requisitos previos en ' +
+                    'negrita,&STANDARD_SETUP&por Estructura estándar en negrita y &ACTIVITY& por Actividades en negrita quita los caracteres especiales como < o >, por ultimo la parte de Valores' + 
+                     '   en la configuración formateala como una tabla, también le agregas un indice al principio con el nombre de la actividad y el texto de la actividad, aqui te doy la documentación:'  ;
                 decodedText = out2 + decodedText;
             }
 
