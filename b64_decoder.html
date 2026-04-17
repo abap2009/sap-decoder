@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decodificador B64 - IMG Decode</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            color: #00d4ff;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        .container {
+            width: 100%;
+            max-width: 700px;
+        }
+        .drop-zone {
+            border: 2px dashed #444;
+            border-radius: 12px;
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #16213e;
+            margin-bottom: 20px;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #00d4ff;
+            background: #1a2a4a;
+        }
+        .drop-zone p {
+            font-size: 1.1rem;
+            color: #aaa;
+            margin-bottom: 12px;
+        }
+        .drop-zone .hint {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        .drop-zone input[type="file"] { display: none; }
+        .btn {
+            display: inline-block;
+            padding: 10px 24px;
+            background: #00d4ff;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #00b8d9; }
+        .btn:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+        }
+        .result {
+            display: none;
+            background: #16213e;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 20px;
+        }
+        .result.show { display: block; }
+        .result h3 {
+            color: #00d4ff;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #2a2a4a;
+            font-size: 0.9rem;
+        }
+        .result-row:last-child { border-bottom: none; }
+        .result-row .label { color: #888; }
+        .result-row .value {
+            color: #e0e0e0;
+            text-align: right;
+            max-width: 60%;
+            word-break: break-all;
+        }
+        .error {
+            background: #3e1621;
+            border: 1px solid #ff4466;
+            color: #ff8899;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .error.show { display: block; }
+        .success {
+            background: #163e21;
+            border: 1px solid #44ff66;
+            color: #88ff99;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .success.show { display: block; }
+        .file-name {
+            color: #00d4ff;
+            font-weight: 600;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Decodificador B64</h1>
+    <p class="subtitle">Replica de Z_IMG_DECODE - Decodifica archivos .b64 codificados con IMG_ENCODED_V1</p>
+
+    <div class="container">
+        <div class="drop-zone" id="dropZone">
+            <p>Arrastra tu archivo .b64 aqui</p>
+            <p class="hint">o haz clic para seleccionar</p>
+            <input type="file" id="fileInput" accept=".b64,*/*">
+            <div class="file-name" id="fileName"></div>
+        </div>
+
+        <div style="text-align: center;">
+            <button class="btn" id="btnDecode" disabled>Decodificar y Descargar</button>
+        </div>
+
+        <div class="error" id="errorMsg"></div>
+        <div class="success" id="successMsg"></div>
+
+        <div class="result" id="resultPanel">
+            <h3>Resultado de la decodificacion</h3>
+            <div class="result-row">
+                <span class="label">Archivo de entrada:</span>
+                <span class="value" id="resInput"></span>
+            </div>
+            <div class="result-row">
+                <span class="label">Metadatos:</span>
+                <span class="value" id="resMeta"></span>
+            </div>
+            <div class="result-row">
+                <span class="label">Archivo de salida:</span>
+                <span class="value" id="resOutput"></span>
+            </div>
+            <div class="result-row">
+                <span class="label">Tamano decodificado:</span>
+                <span class="value" id="resSize"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const btnDecode = document.getElementById('btnDecode');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+        const resultPanel = document.getElementById('resultPanel');
+        const fileNameEl = document.getElementById('fileName');
+
+        let selectedFile = null;
+
+        // Drag & drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                selectFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                selectFile(fileInput.files[0]);
+            }
+        });
+
+        function selectFile(file) {
+            selectedFile = file;
+            fileNameEl.textContent = file.name;
+            btnDecode.disabled = false;
+            hideMessages();
+        }
+
+        function hideMessages() {
+            errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
+            resultPanel.classList.remove('show');
+        }
+
+        function showError(msg) {
+            hideMessages();
+            errorMsg.textContent = msg;
+            errorMsg.classList.add('show');
+        }
+
+        function showSuccess(msg) {
+            successMsg.textContent = msg;
+            successMsg.classList.add('show');
+        }
+
+        btnDecode.onclick = function() {
+            if (!selectedFile) return;
+            hideMessages();
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    processFile(e.target.result, selectedFile.name);
+                } catch (err) {
+                    showError('Error de decodificacion: ' + err.message);
+                }
+            };
+            reader.onerror = function() {
+                showError('No se pudo leer el archivo: ' + selectedFile.name);
+            };
+            reader.readAsText(selectedFile, 'UTF-8');
+        };
+
+        function processFile(content, inputName) {
+            const lines = content.split(/\r?\n/);
+
+            let base64Data = '';
+            let headerFound = false;
+            let dataStarted = false;
+            let dataEnded = false;
+            let metaInfo = '';
+
+            for (const line of lines) {
+                // Verificar cabecera
+                if (line.trim() === '===IMG_ENCODED_V1===') {
+                    headerFound = true;
+                    continue;
+                }
+
+                // Leer metadatos
+                if (headerFound && !dataStarted && line.trim().startsWith('DATE:')) {
+                    metaInfo = line.trim();
+                    continue;
+                }
+
+                // Inicio de datos
+                if (line.trim() === '===DATA_START===') {
+                    dataStarted = true;
+                    continue;
+                }
+
+                // Fin de datos
+                if (line.trim() === '===DATA_END===') {
+                    dataEnded = true;
+                    break;
+                }
+
+                // Acumular datos Base64
+                if (dataStarted && !dataEnded) {
+                    base64Data += line.trim();
+                }
+            }
+
+            // Validaciones
+            if (!headerFound) {
+                showError('Archivo invalido: no se encontro la cabecera ===IMG_ENCODED_V1===');
+                return;
+            }
+
+            if (!dataStarted || !dataEnded) {
+                showError('Archivo corrupto: marcadores de datos incompletos');
+                return;
+            }
+
+            if (!base64Data) {
+                showError('Archivo vacio: no se encontraron datos codificados');
+                return;
+            }
+
+            // Decodificar Base64 a texto UTF-8
+            let decodedText;
+            try {
+                const binaryStr = atob(base64Data);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {
+                    bytes[i] = binaryStr.charCodeAt(i);
+                }
+                decodedText = new TextDecoder('utf-8').decode(bytes);
+            } catch (err) {
+                showError('Error al decodificar Base64. El archivo puede estar corrupto.');
+                return;
+            }
+
+            // Prepender texto de instrucciones (replica de out2 en ABAP)
+            if (decodedText) {
+                const out2 = 'crea un documento en word y ajustame esta documentación para que el arbol final este correctamente armado solo con los textos como en sap spro que se ven algo asi ' +
+                    'ejemplo "Gestión financiera -> Contabilidad principal (nuevo) -> Operaciones periódicas -> Valoración ' +
+                    'ampliada en la contabilidad principal -> Opciones generales -> Activar valoración avanzada", también cámbiame los textos &SHORTTEXT& por Texto breve en negrita, &USE& por Utilización en negrita, <ZH>Atención</> por Atención en negrita, ' +
+                    '&PRECONDITIONS& por Requisitos previos en negrita,' +
+                    '&STANDARD_SETUP&' + 'por Estructura estándar en negrita y &ACTIVITY& por Actividades en negrita quita los caracteres especiales como < o >, por ultimo la parte de Valores en la configuración formateala como una tabla, ' +
+                    'también le agregas un indice al principio con el nombre de la actividad y el texto de la actividad, aqui te doy la documentación:';
+                decodedText = out2 + decodedText;
+            }
+
+            // Generar nombre de archivo de salida
+            const now = new Date();
+            const pad = (n, len) => String(n).padStart(len || 2, '0');
+            const timestamp = '' + now.getFullYear() +
+                pad(now.getMonth() + 1) + pad(now.getDate()) +
+                pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+            const outputName = 'IMG_DECODED_' + timestamp + '.txt';
+
+            // Descargar archivo
+            const blob = new Blob([decodedText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = outputName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Mostrar resultado
+            document.getElementById('resInput').textContent = inputName;
+            document.getElementById('resMeta').textContent = metaInfo || '(sin metadatos)';
+            document.getElementById('resOutput').textContent = outputName;
+            const sizeKB = (new Blob([decodedText]).size / 1024).toFixed(2);
+            document.getElementById('resSize').textContent = sizeKB + ' KB';
+            resultPanel.classList.add('show');
+            showSuccess('Archivo decodificado exitosamente: ' + outputName);
+        }
+    </script>
+</body>
+</html>
